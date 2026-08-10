@@ -1,0 +1,47 @@
+name: Waldbrandgefahrenindex aktualisieren
+
+on:
+  schedule:
+    - cron: '35 * * * *'
+
+  # Ermöglicht einen manuellen Test.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-wbi
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v7
+
+      - name: Python einrichten
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Daten abrufen
+        run: python scripts/update_wbi.py
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add data/wbi.json
+
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen an data/wbi.json."
+            exit 0
+          fi
+
+          git commit -m "Waldbrandgefahrenindex aktualisiert"
+          git push
